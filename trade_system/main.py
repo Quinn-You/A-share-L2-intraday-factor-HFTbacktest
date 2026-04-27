@@ -36,9 +36,9 @@ def _build_parser() -> argparse.ArgumentParser:
 		default=Path("/data/sihang/AlphaPROBETick/alpha_monthly"),
 		help="alpha parquet 路径或 alpha_monthly 根目录",
 	)
-	p.add_argument("--threshold", type=float, default=0.3, help="alpha 开仓阈值")
+	p.add_argument("--threshold", type=float, default=0.4, help="alpha 开仓阈值")
 	p.add_argument("--hold-min", type=int, default=5, help="固定持有分钟数")
-	p.add_argument("--notional", type=float, default=1_000.0, help="每笔名义资金")
+	p.add_argument("--notional", type=float, default=10_000.0, help="每笔名义资金")
 	p.add_argument("--lot-size", type=int, default=100, help="最小交易数")
 	p.add_argument("--step-ns", type=int, default=10_000_000, help="引擎时间推进步长（纳秒）")
 	p.add_argument("--tick-size", type=float, default=0.01, help="最小价格变动")

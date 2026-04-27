@@ -56,23 +56,36 @@ def _symbol_chart_dir(report_dir: Path) -> Path:
 
 
 def _plot_cumulative_pnl(all_trades: pl.DataFrame, out_path: Path) -> None:
-	"""按平仓时间绘制全市场累计 PnL 曲线。"""
+	"""按平仓时间在同一张图中绘制 Long/Short/Total 三条累计 PnL 子图。"""
 	plot_df = (
-		all_trades.select(["exit_time", "pnl"])
+		all_trades.select(["exit_time", "side", "pnl"])
 		.with_columns(pl.col("exit_time").str.strptime(pl.Datetime, format="%Y-%m-%d %H:%M:%S", strict=False))
+		.drop_nulls(["exit_time", "side", "pnl"])
 		.sort("exit_time")
 	)
 	if plot_df.height == 0:
 		return
-	x = plot_df.get_column("exit_time").to_list()
-	y = np.cumsum(plot_df.get_column("pnl").cast(pl.Float64).to_numpy())
 
-	fig, ax = plt.subplots(figsize=(12, 5))
-	ax.plot(x, y, color="#0f766e", linewidth=2.0)
-	ax.set_title("Market Cumulative PnL")
-	ax.set_xlabel("Exit Time")
-	ax.set_ylabel("Cumulative PnL")
-	ax.grid(alpha=0.25)
+	def _draw_subplot(ax: plt.Axes, trades_df: pl.DataFrame, title: str, color: str) -> None:
+		ax.set_title(title)
+		ax.set_ylabel("Cumulative PnL")
+		ax.axhline(0.0, color="#334155", linewidth=1.0)
+		ax.grid(alpha=0.25)
+		if trades_df.height == 0:
+			ax.text(0.5, 0.5, "No trades", ha="center", va="center", transform=ax.transAxes, color="#64748b")
+			return
+		x_values = trades_df.get_column("exit_time").to_list()
+		y_values = np.cumsum(trades_df.get_column("pnl").cast(pl.Float64).to_numpy())
+		ax.plot(x_values, y_values, color=color, linewidth=2.0)
+
+	long_df = plot_df.filter(pl.col("side") == "long")
+	short_df = plot_df.filter(pl.col("side") == "short")
+
+	fig, axes = plt.subplots(3, 1, figsize=(12, 11), sharex=True)
+	_draw_subplot(axes[0], long_df, "Long Cumulative PnL", "#1d4ed8")
+	_draw_subplot(axes[1], short_df, "Short Cumulative PnL", "#b91c1c")
+	_draw_subplot(axes[2], plot_df, "Total Cumulative PnL", "#0f766e")
+	axes[2].set_xlabel("Exit Time")
 	fig.autofmt_xdate()
 	fig.tight_layout()
 	fig.savefig(out_path, dpi=180)
